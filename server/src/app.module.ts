@@ -1,12 +1,14 @@
+import { join } from 'path';
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigModule } from '@nestjs/config';
+import { ServeStaticModule } from '@nestjs/serve-static';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { DatabaseModule } from './database/database.module';
 import { PartModule } from './parts/part.module';
 import { RejectionModule } from './rejections/rejection.module';
-
+console.log(__dirname)
 @Module({
   imports: [
     ConfigModule.forRoot(),
@@ -19,6 +21,17 @@ import { RejectionModule } from './rejections/rejection.module';
         return connection;
       },
     }),
+    ...(process.env.NODE_ENV !== 'development'
+      ? [
+        ServeStaticModule.forRoot({
+          rootPath: join(__dirname, '..', '..', 'client', 'dist'),
+          exclude: ['/api*'],
+          serveStaticOptions: {
+            index: 'index.html',
+          },
+        }),
+      ]
+      : []),
     DatabaseModule,
     PartModule,
     RejectionModule,
@@ -26,4 +39,4 @@ import { RejectionModule } from './rejections/rejection.module';
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule { }

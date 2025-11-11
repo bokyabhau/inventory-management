@@ -2,5 +2,9 @@
   "name": "inventory-manager",
   "version": "1.0.0",
   "main": "index.js",
-  "license": "MIT"
+  "license": "MIT",
+  "scripts": {
+    "predeploy": "cd server && yarn && cd .. && cd client && yarn && cd .. && cd server && yarn build && cd .. && cd client && yarn build && cd ..",
+    "deploy": "cd server && yarn start:prod"
+  }
 }

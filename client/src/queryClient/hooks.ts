@@ -78,7 +78,7 @@ export const useRejections = () => {
 export const useCreatePart = () => {
   return useMutation({
     mutationFn: createPartApi,
-    onSuccess: (...args) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.PARTS });
     },
   });
