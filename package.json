@@ -4,7 +4,12 @@
   "main": "index.js",
   "license": "MIT",
   "scripts": {
-    "predeploy": "cd server && yarn && cd .. && cd client && yarn && cd .. && cd server && yarn build && cd .. && cd client && yarn build && cd ..",
+    "client:install":"cd client && yarn && cd ..",
+    "server:install":"cd server && yarn && cd ..",
+    "client:build":"cd client && yarn build && cd ..",
+    "server:build":"cd server && yarn build && cd ..",
+    "prebuild": "yarn client:install && yarn server:install",
+    "build": "yarn server:build && yarn client:build",
     "deploy": "cd server && yarn start:prod"
   }
 }
