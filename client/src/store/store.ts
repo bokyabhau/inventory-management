@@ -1,9 +1,11 @@
 import { configureStore } from '@reduxjs/toolkit';
 import partsReducer from './parts.slice';
+import dialogReducer from './dialog.slice';
 
 export const store = configureStore({
   reducer: {
     parts: partsReducer,
+    dialog: dialogReducer,
   },
 });
 
