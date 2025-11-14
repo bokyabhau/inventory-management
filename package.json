@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "license": "MIT",
+  "private": true,
   "scripts": {
     "client:install":"cd client && yarn && cd ..",
     "server:install":"cd server && yarn && cd ..",
