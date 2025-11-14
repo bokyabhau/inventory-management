@@ -14,7 +14,7 @@ export type RejectionDocument = Rejection & Document;
   },
 })
 export class Rejection {
-  @Prop({ required: true })
+  @Prop({ required: true, unique: true })
   name: string;
 }
 
