@@ -1,5 +1,6 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { setParts } from '../store/parts.slice';
+import { setRejections } from '../store/rejections.slice';
 import { useDispatch } from 'react-redux';
 import { queryClient } from './queryClient';
 import type { Entity } from '../components/common/common.types';
@@ -51,9 +52,13 @@ export const useDeletePart = () => {
 }
 
 export const useRejections = () => {
+   const dispatch = useDispatch();
   return useQuery<Entity[]>({
     queryKey: QUERY_KEYS.REJECTIONS,
     queryFn: Api.getRejectionsApi,
+    onSuccess: (data) => {
+      dispatch(setRejections(data));
+    }
   });
 };
 
