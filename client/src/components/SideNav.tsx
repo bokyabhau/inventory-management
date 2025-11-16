@@ -7,6 +7,9 @@ const SideNav: React.FC = () => (
       <ListItem component={Link} to="/data-entry">
         <ListItemText primary="Data Entry" />
       </ListItem>
+      <ListItem component={Link} to="/records">
+        <ListItemText primary="Records" />
+      </ListItem>
       <ListItem component={Link} to="/parts">
         <ListItemText primary="Parts" />
       </ListItem>
