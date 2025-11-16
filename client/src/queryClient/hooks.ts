@@ -9,6 +9,7 @@ import * as Api from './endpoints'
 export const QUERY_KEYS = {
   PARTS: ['[PARTS]'],
   REJECTIONS: ['[REJECTIONS]'],
+  DATA_ENTRIES: ['[DATA_ENTRIES]'],
 };
 
 
@@ -88,3 +89,19 @@ export const useDeleteRejection = () => {
     }
   });
 }
+
+export const useCreateDataEntry = () => {
+  return useMutation({
+    mutationFn: Api.createDataEntryApi,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.DATA_ENTRIES });
+    },
+  });
+};
+
+export const useDataEntries = () => {
+  return useQuery({
+    queryKey: QUERY_KEYS.DATA_ENTRIES,
+    queryFn: Api.getDataEntriesApi,
+  });
+};

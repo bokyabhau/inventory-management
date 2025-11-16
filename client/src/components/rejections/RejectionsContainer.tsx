@@ -1,4 +1,4 @@
-import React, { useReducer } from 'react';
+import React from 'react';
 import { useCreateRejection,useEditRejection,useDeleteRejection,useRejections } from '../../queryClient/hooks';
 import CreateEntity from '../common/CreateEntity';
 import EntityList from '../common/EntityList';
@@ -12,7 +12,7 @@ const RejectionsContainer: React.FC = () => {
   const {data:rejections}= useRejections();
 
   const handleCreateRejection = (name:string) => {
-    createRejection({ id: Date.now().toString(), name });
+    createRejection({ name });
   };
   const handleEditRejection = (rejection:Entity) => {
     editRejectioin(rejection);

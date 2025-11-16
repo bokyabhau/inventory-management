@@ -4,6 +4,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import PartsContainer from './components/parts/PartsContainer';
 import RejectionsContainer from './components/rejections/RejectionsContainer';
 import DataEntryContainer from './components/dataEntry/DataEntryContainer';
+import RecordsContainer from './components/records/RecordsContainer';
 import SideNav from './components/SideNav';
 import RouteChangeLogger from './components/RouteChangeLogger';
 
@@ -18,6 +19,7 @@ export default function App() {
         <Paper style={{ padding: '20px', minHeight: '80vh' }}>
           <Routes>
             <Route path="/data-entry" element={<DataEntryContainer />} />
+            <Route path="/records" element={<RecordsContainer />} />
             <Route path="/parts" element={<PartsContainer />} />
             <Route path="/rejections" element={<RejectionsContainer />} />
             <Route path="/" element={<Navigate to="/data-entry" replace />} />

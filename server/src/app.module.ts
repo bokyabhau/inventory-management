@@ -8,6 +8,7 @@ import { AppService } from './app.service';
 import { DatabaseModule } from './database/database.module';
 import { PartModule } from './parts/part.module';
 import { RejectionModule } from './rejections/rejection.module';
+import { DataEntryModule } from './dataEntry/data-entry.module';
 console.log(__dirname)
 @Module({
   imports: [
@@ -25,7 +26,7 @@ console.log(__dirname)
       ? [
         ServeStaticModule.forRoot({
           rootPath: join(__dirname, '..', '..', 'client', 'dist'),
-          exclude: ['/api*'],
+          exclude: ['/api'],
           serveStaticOptions: {
             index: 'index.html',
           },
@@ -35,6 +36,7 @@ console.log(__dirname)
     DatabaseModule,
     PartModule,
     RejectionModule,
+    DataEntryModule,
   ],
   controllers: [AppController],
   providers: [AppService],

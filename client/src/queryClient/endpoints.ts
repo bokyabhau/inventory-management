@@ -56,7 +56,7 @@ export const getRejectionsApi = async () => {
   return response.json();
 };
 
-export const createRejectionApi = async (rejection: Entity) => {
+export const createRejectionApi = async (rejection: EntityDto) => {
   const response = await fetch('/api/rejections', {
     method: 'POST',
     headers: {
@@ -94,3 +94,38 @@ export const deleteRejectionApi = async (rejectionId: string) => {
   }
   return response.json();
 }
+
+export interface DataEntryDto {
+  date: string;
+  shift: string;
+  inspectorName: string;
+  part: string;
+  numberOfParts: number;
+  rejection: string;
+  numberOfRejections: number;
+  lotNumber: string;
+}
+
+export const createDataEntryApi = async (dataEntry: DataEntryDto) => {
+  const response = await fetch('/api/data-entries', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(dataEntry),
+  });
+
+  if (!response.ok) {
+    const error: Error = await response.json();
+    throw new Error(error.message);
+  }
+  return response.json();
+};
+
+export const getDataEntriesApi = async () => {
+  const response = await fetch('/api/data-entries');
+  if (!response.ok) {
+    throw new Error('Network response was not ok');
+  }
+  return response.json();
+};
