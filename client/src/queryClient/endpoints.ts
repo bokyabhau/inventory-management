@@ -95,14 +95,18 @@ export const deleteRejectionApi = async (rejectionId: string) => {
   return response.json();
 }
 
+export interface RejectionItemDto {
+  reason: string;
+  numberOfRejections: number;
+}
+
 export interface DataEntryDto {
   date: string;
   shift: string;
   inspectorName: string;
   part: string;
   numberOfParts: number;
-  rejection: string;
-  numberOfRejections: number;
+  rejections: RejectionItemDto[];
   lotNumber: string;
 }
 
@@ -124,6 +128,89 @@ export const createDataEntryApi = async (dataEntry: DataEntryDto) => {
 
 export const getDataEntriesApi = async () => {
   const response = await fetch('/api/data-entries');
+  if (!response.ok) {
+    throw new Error('Network response was not ok');
+  }
+  return response.json();
+};
+
+export interface FilterDataEntriesParams {
+  partName?: string;
+  startDate?: string;
+  endDate?: string;
+}
+
+export const filterDataEntriesApi = async (params: FilterDataEntriesParams) => {
+  const queryParams = new URLSearchParams();
+  if (params.partName) queryParams.append('partName', params.partName);
+  if (params.startDate) queryParams.append('startDate', params.startDate);
+  if (params.endDate) queryParams.append('endDate', params.endDate);
+
+  const response = await fetch(`/api/data-entries/filter?${queryParams.toString()}`);
+  if (!response.ok) {
+    throw new Error('Network response was not ok');
+  }
+  return response.json();
+};
+
+// Preferences API
+export interface PreferenceDto {
+  name: string;
+  value: string;
+}
+
+export const getPreferencesApi = async () => {
+  const response = await fetch('/api/preferences');
+  if (!response.ok) {
+    throw new Error('Network response was not ok');
+  }
+  return response.json();
+};
+
+export const getPreferenceApi = async (name: string) => {
+  const response = await fetch(`/api/preferences/${name}`);
+  if (!response.ok) {
+    throw new Error('Network response was not ok');
+  }
+  return response.json();
+};
+
+export const createPreferenceApi = async (preference: PreferenceDto) => {
+  const response = await fetch('/api/preferences', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(preference),
+  });
+
+  if (!response.ok) {
+    const error: Error = await response.json();
+    throw new Error(error.message);
+  }
+  return response.json();
+};
+
+export const updatePreferenceApi = async (name: string, value: string) => {
+  const response = await fetch(`/api/preferences/${name}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ value }),
+  });
+
+  if (!response.ok) {
+    throw new Error('Network response was not ok');
+  }
+  return response.json();
+};
+
+export const deletePreferenceApi = async (name: string) => {
+  const response = await fetch(`/api/preferences/${name}`, {
+    method: 'DELETE',
+  });
+
   if (!response.ok) {
     throw new Error('Network response was not ok');
   }
