@@ -10,6 +10,7 @@ export const QUERY_KEYS = {
   PARTS: ['[PARTS]'],
   REJECTIONS: ['[REJECTIONS]'],
   DATA_ENTRIES: ['[DATA_ENTRIES]'],
+  PREFERENCES: ['[PREFERENCES]'],
 };
 
 
@@ -103,5 +104,49 @@ export const useDataEntries = () => {
   return useQuery({
     queryKey: QUERY_KEYS.DATA_ENTRIES,
     queryFn: Api.getDataEntriesApi,
+  });
+};
+
+export const useFilterDataEntries = (params: Api.FilterDataEntriesParams) => {
+  return useQuery({
+    queryKey: [...QUERY_KEYS.DATA_ENTRIES, params],
+    queryFn: () => Api.filterDataEntriesApi(params),
+    enabled: !!(params.partName || params.startDate || params.endDate),
+  });
+};
+
+// Preferences hooks
+export const usePreferences = () => {
+  return useQuery({
+    queryKey: QUERY_KEYS.PREFERENCES,
+    queryFn: Api.getPreferencesApi,
+  });
+};
+
+export const useCreatePreference = () => {
+  return useMutation({
+    mutationFn: Api.createPreferenceApi,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.PREFERENCES });
+    },
+  });
+};
+
+export const useUpdatePreference = () => {
+  return useMutation({
+    mutationFn: ({ name, value }: { name: string; value: string }) =>
+      Api.updatePreferenceApi(name, value),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.PREFERENCES });
+    },
+  });
+};
+
+export const useDeletePreference = () => {
+  return useMutation({
+    mutationFn: Api.deletePreferenceApi,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.PREFERENCES });
+    },
   });
 };

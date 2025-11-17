@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, NotFoundException, Query } from '@nestjs/common';
 import { DataEntryService } from './data-entry.service';
 import { CreateDataEntryDto, UpdateDataEntryDto } from './dto/data-entry.dto';
 
@@ -15,6 +15,15 @@ export class DataEntryController {
   async findAll() {
     console.log('Fetching all data entries');
     return this.dataEntryService.findAll();
+  }
+
+  @Get('filter')
+  async filter(
+    @Query('partName') partName?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string
+  ) {
+    return this.dataEntryService.filter(partName, startDate, endDate);
   }
 
   @Get(':id')

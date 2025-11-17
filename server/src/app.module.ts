@@ -9,6 +9,7 @@ import { DatabaseModule } from './database/database.module';
 import { PartModule } from './parts/part.module';
 import { RejectionModule } from './rejections/rejection.module';
 import { DataEntryModule } from './dataEntry/data-entry.module';
+import { PreferenceModule } from './preferences/preference.module';
 console.log(__dirname)
 @Module({
   imports: [
@@ -37,6 +38,7 @@ console.log(__dirname)
     PartModule,
     RejectionModule,
     DataEntryModule,
+    PreferenceModule,
   ],
   controllers: [AppController],
   providers: [AppService],

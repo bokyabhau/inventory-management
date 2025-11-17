@@ -1,4 +1,16 @@
-import { IsNotEmpty, IsString, IsDateString, IsEnum, IsNumber, IsMongoId, Min } from 'class-validator';
+import { IsNotEmpty, IsString, IsDateString, IsEnum, IsNumber, IsMongoId, Min, IsArray, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
+
+export class RejectionItemDto {
+  @IsMongoId()
+  @IsNotEmpty()
+  reason: string;
+
+  @IsNumber()
+  @Min(0)
+  @IsNotEmpty()
+  numberOfRejections: number;
+}
 
 export class CreateDataEntryDto {
   @IsDateString()
@@ -22,14 +34,11 @@ export class CreateDataEntryDto {
   @IsNotEmpty()
   numberOfParts: number;
 
-  @IsMongoId()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => RejectionItemDto)
   @IsNotEmpty()
-  rejection: string;
-
-  @IsNumber()
-  @Min(0)
-  @IsNotEmpty()
-  numberOfRejections: number;
+  rejections: RejectionItemDto[];
 
   @IsString()
   @IsNotEmpty()
@@ -53,12 +62,10 @@ export class UpdateDataEntryDto {
   @Min(0)
   numberOfParts?: number;
 
-  @IsMongoId()
-  rejection?: string;
-
-  @IsNumber()
-  @Min(0)
-  numberOfRejections?: number;
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => RejectionItemDto)
+  rejections?: RejectionItemDto[];
 
   @IsString()
   lotNumber?: string;

@@ -9,6 +9,8 @@ import PartsContainer from './components/parts/PartsContainer';
 import RejectionsContainer from './components/rejections/RejectionsContainer';
 import DataEntryContainer from './components/dataEntry/DataEntryContainer';
 import RecordsContainer from './components/records/RecordsContainer';
+import ReportsContainer from './components/reports/ReportsContainer';
+import PreferencesContainer from './components/preferences/PreferencesContainer';
 import SideNav from './components/SideNav';
 import RouteChangeLogger from './components/RouteChangeLogger';
 
@@ -32,8 +34,10 @@ export default function App() {
             <Routes>
               <Route path="/data-entry" element={<DataEntryContainer />} />
               <Route path="/records" element={<RecordsContainer />} />
+              <Route path="/reports" element={<ReportsContainer />} />
               <Route path="/parts" element={<PartsContainer />} />
               <Route path="/rejections" element={<RejectionsContainer />} />
+              <Route path="/preferences" element={<PreferencesContainer />} />
               <Route path="/" element={<Navigate to="/data-entry" replace />} />
             </Routes>
           </Paper>
