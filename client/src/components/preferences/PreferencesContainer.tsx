@@ -134,7 +134,7 @@ const PreferencesContainer: React.FC = () => {
         <TableContainer component={Paper}>
           <Table>
             <TableHead>
-              <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+              <TableRow>
                 <TableCell><strong>Name</strong></TableCell>
                 <TableCell><strong>Value</strong></TableCell>
                 <TableCell align="center"><strong>Actions</strong></TableCell>

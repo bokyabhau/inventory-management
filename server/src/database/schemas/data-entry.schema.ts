@@ -64,10 +64,10 @@ export class DataEntry {
   @Prop({ required: true })
   lotNumber: string;
 
-  @Prop({ type: Date, default: () => new Date() })
+  @Prop({ type: Date, default: () => new Date().toISOString() })
   createdAt: Date;
 
-  @Prop({ type: Date, default: () => new Date() })
+  @Prop({ type: Date, default: () => new Date().toISOString() })
   updatedAt: Date;
 }
 
