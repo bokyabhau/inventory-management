@@ -62,9 +62,6 @@ const DataEntryContainer: React.FC = () => {
     if (!formData.numberOfParts || isNaN(Number(formData.numberOfParts)) || Number(formData.numberOfParts) < 0) {
       newErrors.numberOfParts = 'Please enter a valid number';
     }
-    if (rejectionItems.length === 0) {
-      newErrors.rejections = 'Please add at least one rejection';
-    }
     if (!formData.lotNumber.trim()) {
       newErrors.lotNumber = 'Lot number is required';
     }
@@ -107,7 +104,7 @@ const DataEntryContainer: React.FC = () => {
       return;
     }
 
-    if (!formData.part || rejectionItems.length === 0) {
+    if (!formData.part) {
       return;
     }
 
@@ -160,9 +157,6 @@ const DataEntryContainer: React.FC = () => {
           <Alert severity="error">
             {error instanceof Error ? error.message : 'Failed to create data entry'}
           </Alert>
-        )}
-        {errors.rejections && (
-          <Alert severity="error">{errors.rejections}</Alert>
         )}
 
         {/* Row 1: Date and Shift */}
