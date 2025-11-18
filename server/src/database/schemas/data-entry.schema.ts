@@ -3,6 +3,14 @@ import { Document, Types } from 'mongoose';
 import { Part } from './part.schema';
 import { Rejection } from './rejection.schema';
 
+const formatDate = (date: Date): string => {
+  const created = date;
+  const day = String(created.getDate()).padStart(2, '0');
+  const month = created.toLocaleString('en-US', { month: 'short' });
+  const year = created.getFullYear();
+  return `${day}-${month}-${year}`;
+}
+
 export type DataEntryDocument = DataEntry & Document;
 
 interface RejectionDetail {
@@ -16,16 +24,15 @@ interface RejectionDetail {
     transform: (_, ret) => {
       const { _id, __v, ...rest } = ret;
       (rest as { id: any }).id = _id;
-      // Convert all Date fields to ISO strings
       const result = rest as any;
       if (result.date instanceof Date) {
-        result.date = result.date.toISOString();
+        result.date = formatDate(result.date);
       }
       if (result.createdAt instanceof Date) {
-        result.createdAt = result.createdAt.toISOString();
+        result.createdAt = formatDate(result.createdAt);
       }
       if (result.updatedAt instanceof Date) {
-        result.updatedAt = result.updatedAt.toISOString();
+        result.updatedAt = formatDate(result.updatedAt);
       }
       return result;
     },

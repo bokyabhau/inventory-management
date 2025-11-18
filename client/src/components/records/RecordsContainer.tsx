@@ -49,6 +49,8 @@ const ExpandableRow: React.FC<{ row: DataEntry; warningThreshold: number; danger
     rowBackgroundColor = '#2c0b0e'; // Light red
   } else if (rejectionPercentage >= warningThreshold) {
     rowBackgroundColor = '#332701'; // Light orange
+  } else if (rejectionPercentage < warningThreshold) {
+    rowBackgroundColor = '#388e3c'; // Default
   }
 
   const rowStyling = rowBackgroundColor ? { backgroundColor: rowBackgroundColor } : {};

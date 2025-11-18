@@ -14,8 +14,7 @@ import {
   TableRow,
   Autocomplete,
 } from '@mui/material';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { TimePicker } from '@mui/x-date-pickers/TimePicker';
+import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import Dayjs from 'dayjs';
 import { useParts } from '../../queryClient/hooks';
 import { useFilterDataEntries } from '../../queryClient/hooks';
@@ -32,11 +31,14 @@ interface DataEntry {
     name: string;
   };
   numberOfParts: number;
-  rejection: {
-    id: string;
-    name: string;
-  };
-  numberOfRejections: number;
+  rejections: Array<{
+    reason: {
+      id: string;
+      name: string;
+    };
+    numberOfRejections: number;
+  }>;
+  totalRejections: number;
   lotNumber: string;
 }
 
@@ -50,10 +52,7 @@ interface RejectionStats {
 const ReportsContainer: React.FC = () => {
   const [filters, setFilters] = useState<FilterDataEntriesParams>({});
   const [selectedParts, setSelectedParts] = useState<string[]>([]);
-  const [startDate, setStartDate] = useState<Dayjs.Dayjs | null>(null);
-  const [startTime, setStartTime] = useState<Dayjs.Dayjs | null>(null);
-  const [endDate, setEndDate] = useState<Dayjs.Dayjs>(Dayjs());
-  const [endTime, setEndTime] = useState<Dayjs.Dayjs>(Dayjs());
+  const [dateTimeRange, setDateTimeRange] = useState<[Dayjs.Dayjs | null, Dayjs.Dayjs | null]>([null, null]);
   const [hasFiltered, setHasFiltered] = useState(false);
 
   const { data: parts = [] } = useParts();
@@ -76,7 +75,7 @@ const ReportsContainer: React.FC = () => {
       0
     );
     const totalRejections = (displayData as DataEntry[]).reduce(
-      (sum, entry) => sum + entry.numberOfRejections,
+      (sum, entry) => sum + entry.totalRejections,
       0
     );
     const cumulativeRejectionPercentage =
@@ -84,11 +83,13 @@ const ReportsContainer: React.FC = () => {
 
     const rejectionReasons: RejectionStats = {};
     (displayData as DataEntry[]).forEach((entry) => {
-      const rejectionName = entry.rejection?.name || 'Unknown';
-      if (!rejectionReasons[rejectionName]) {
-        rejectionReasons[rejectionName] = { count: 0, percentage: 0 };
-      }
-      rejectionReasons[rejectionName].count += entry.numberOfRejections;
+      entry.rejections.forEach((rejection) => {
+        const rejectionName = rejection.reason?.name || 'Unknown';
+        if (!rejectionReasons[rejectionName]) {
+          rejectionReasons[rejectionName] = { count: 0, percentage: 0 };
+        }
+        rejectionReasons[rejectionName].count += rejection.numberOfRejections;
+      });
     });
 
     Object.keys(rejectionReasons).forEach((reason) => {
@@ -115,20 +116,15 @@ const ReportsContainer: React.FC = () => {
       newFilters.partName = selectedParts.join(',');
     }
     
-    if (startDate) {
-      const startDateTime = startDate.clone();
-      if (startTime) {
-        startDateTime.hour(startTime.hour()).minute(startTime.minute()).second(0);
-      }
-      newFilters.startDate = startDateTime.toISOString();
+    const [startDateTime, endDateTime] = dateTimeRange;
+    
+    if (startDateTime) {
+      newFilters.startDate = startDateTime.toString();
     }
     
-    if (endDate) {
-      const endDateTime = endDate.clone();
-      if (endTime) {
-        endDateTime.hour(endTime.hour()).minute(endTime.minute()).second(59);
-      }
-      newFilters.endDate = endDateTime.toISOString();
+    if (endDateTime) {
+      const endDateTimeAdjusted = endDateTime.clone().second(59);
+      newFilters.endDate = endDateTimeAdjusted.toString();
     }
 
     setFilters(newFilters);
@@ -137,23 +133,41 @@ const ReportsContainer: React.FC = () => {
 
   const handleReset = () => {
     setSelectedParts([]);
-    setStartDate(null);
-    setStartTime(null);
-    setEndDate(Dayjs());
-    setEndTime(Dayjs());
+    setDateTimeRange([null, null]);
     setFilters({});
     setHasFiltered(false);
   };  const exportToExcel = () => {
-    const reportData = (displayData as DataEntry[]).map((entry) => ({
-      Date: Dayjs(entry.date).format('DD/MM/YYYY HH:mm'),
-      Shift: entry.shift,
-      'Inspector Name': entry.inspectorName,
-      Part: entry.part?.name || 'N/A',
-      'Number of Parts': entry.numberOfParts,
-      Rejection: entry.rejection?.name || 'N/A',
-      'Number of Rejections': entry.numberOfRejections,
-      'Lot Number': entry.lotNumber,
-    }));
+    const reportData: any[] = [];
+    
+    (displayData as DataEntry[]).forEach((entry) => {
+      if (entry.rejections.length === 0) {
+        // If no rejections, create one row without rejection details
+        reportData.push({
+          Date: Dayjs(entry.date).format('DD/MM/YYYY HH:mm'),
+          Shift: entry.shift,
+          'Inspector Name': entry.inspectorName,
+          Part: entry.part?.name || 'N/A',
+          'Number of Parts': entry.numberOfParts,
+          Rejection: 'N/A',
+          'Number of Rejections': 0,
+          'Lot Number': entry.lotNumber,
+        });
+      } else {
+        // For each rejection, create a row
+        entry.rejections.forEach((rejection) => {
+          reportData.push({
+            Date: Dayjs(entry.date).format('DD/MM/YYYY HH:mm'),
+            Shift: entry.shift,
+            'Inspector Name': entry.inspectorName,
+            Part: entry.part?.name || 'N/A',
+            'Number of Parts': entry.numberOfParts,
+            Rejection: rejection.reason?.name || 'N/A',
+            'Number of Rejections': rejection.numberOfRejections,
+            'Lot Number': entry.lotNumber,
+          });
+        });
+      }
+    });
 
     const summaryData = [
       { Metric: 'Total Parts', Value: statistics.totalParts },
@@ -204,48 +218,29 @@ const ReportsContainer: React.FC = () => {
           </FormControl>
         </Box>
 
-        {/* Start Date and Time Row */}
+        {/* Date/Time Range Row */}
         <Box sx={{ display: 'flex', gap: 2, marginBottom: 2 }}>
-          <FormControl sx={{ minWidth: 150 }}>
-            <DatePicker
-              label="Start Date"
-              value={startDate}
-              onChange={(newValue) => setStartDate(newValue)}
+          <FormControl sx={{ minWidth: 200 }}>
+            <DateTimePicker
+              label="Start Date & Time"
+              value={dateTimeRange[0]}
+              onChange={(newValue: any) =>
+                setDateTimeRange([newValue, dateTimeRange[1]])
+              }
               slotProps={{ textField: { size: 'small' } }}
-              disableFuture
-              format='DD-MMM-YYYY'
+              format="DD/MM/YYYY HH:mm"
             />
           </FormControl>
 
-          <FormControl sx={{ minWidth: 120 }}>
-            <TimePicker
-              label="Start Time"
-              value={startTime}
-              onChange={(newValue) => setStartTime(newValue)}
+          <FormControl sx={{ minWidth: 200 }}>
+            <DateTimePicker
+              label="End Date & Time"
+              value={dateTimeRange[1]}
+              onChange={(newValue: any) =>
+                setDateTimeRange([dateTimeRange[0], newValue])
+              }
               slotProps={{ textField: { size: 'small' } }}
-            />
-          </FormControl>
-        </Box>
-
-        {/* End Date and Time Row */}
-        <Box sx={{ display: 'flex', gap: 2, marginBottom: 2 }}>
-          <FormControl sx={{ minWidth: 150 }}>
-            <DatePicker
-              label="End Date"
-              value={endDate}
-              onChange={(newValue) => setEndDate(newValue || Dayjs())}
-              slotProps={{ textField: { size: 'small' } }}
-              disableFuture
-              format='DD-MMM-YYYY'
-            />
-          </FormControl>
-
-          <FormControl sx={{ minWidth: 120 }}>
-            <TimePicker
-              label="End Time"
-              value={endTime}
-              onChange={(newValue) => setEndTime(newValue || Dayjs())}
-              slotProps={{ textField: { size: 'small' } }}
+              format="DD/MM/YYYY HH:mm"
             />
           </FormControl>
         </Box>
@@ -330,18 +325,48 @@ const ReportsContainer: React.FC = () => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {(displayData as DataEntry[]).map((entry) => (
-                      <TableRow key={entry.id} hover>
-                        <TableCell>{Dayjs(entry.date).format('DD/MM/YYYY HH:mm')}</TableCell>
-                        <TableCell>{entry.shift}</TableCell>
-                        <TableCell>{entry.inspectorName}</TableCell>
-                        <TableCell>{entry.part?.name || 'N/A'}</TableCell>
-                        <TableCell>{entry.rejection?.name || 'N/A'}</TableCell>
-                        <TableCell align="right">{entry.numberOfParts}</TableCell>
-                        <TableCell align="right">{entry.numberOfRejections}</TableCell>
-                        <TableCell>{entry.lotNumber}</TableCell>
-                      </TableRow>
-                    ))}
+                    {(displayData as DataEntry[]).map((entry) => {
+                      // If no rejections, show one row
+                      if (entry.rejections.length === 0) {
+                        return (
+                          <TableRow key={entry.id} hover>
+                            <TableCell>{Dayjs(entry.date).format('DD/MM/YYYY HH:mm')}</TableCell>
+                            <TableCell>{entry.shift}</TableCell>
+                            <TableCell>{entry.inspectorName}</TableCell>
+                            <TableCell>{entry.part?.name || 'N/A'}</TableCell>
+                            <TableCell>N/A</TableCell>
+                            <TableCell align="right">{entry.numberOfParts}</TableCell>
+                            <TableCell align="right">0</TableCell>
+                            <TableCell>{entry.lotNumber}</TableCell>
+                          </TableRow>
+                        );
+                      }
+                      
+                      // For each rejection, show a row
+                      return entry.rejections.map((rejection, index) => (
+                        <TableRow key={`${entry.id}-${index}`} hover>
+                          {index === 0 ? (
+                            <>
+                              <TableCell>{Dayjs(entry.date).format('DD/MM/YYYY HH:mm')}</TableCell>
+                              <TableCell>{entry.shift}</TableCell>
+                              <TableCell>{entry.inspectorName}</TableCell>
+                              <TableCell>{entry.part?.name || 'N/A'}</TableCell>
+                            </>
+                          ) : (
+                            <>
+                              <TableCell></TableCell>
+                              <TableCell></TableCell>
+                              <TableCell></TableCell>
+                              <TableCell></TableCell>
+                            </>
+                          )}
+                          <TableCell>{rejection.reason?.name || 'N/A'}</TableCell>
+                          <TableCell align="right">{index === 0 ? entry.numberOfParts : ''}</TableCell>
+                          <TableCell align="right">{rejection.numberOfRejections}</TableCell>
+                          <TableCell>{index === 0 ? entry.lotNumber : ''}</TableCell>
+                        </TableRow>
+                      ));
+                    })}
                   </TableBody>
                 </Table>
               </TableContainer>
