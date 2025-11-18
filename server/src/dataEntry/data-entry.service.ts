@@ -87,7 +87,7 @@ export class DataEntryService {
     startDate?: string,
     endDate?: string
   ): Promise<DataEntry[]> {
-    let query: any = {};
+    let query;
 
     console.log('Filter called with - partName:', partName, 'startDate:', startDate, 'endDate:', endDate);
 
@@ -98,8 +98,11 @@ export class DataEntryService {
       console.log('Filtering by part names:', partNames, 'resolved IDs:', partIds);
 
       if (partIds.length > 0) {
+        // query = {
+        //   ...query,
+        //   part: { $in: partIds }
+        // };
         query = {
-          ...query,
           part: { $in: partIds }
         };
       } else {
@@ -111,19 +114,16 @@ export class DataEntryService {
     if (startDate || endDate) {
       if (startDate) {
         console.log('Filtering from startDate:', startDate);
-        const startDateObj = new Date(startDate);
+        const startDateObj = new Date(startDate).toUTCString();
         console.log('Converted startDate to Date object:', startDateObj);
         query = {
           ...query,
-          createdAt: {
-            ...query.createdAt,
-            $gte: startDateObj
-          }
-        }
+          createdAt: { $gte: startDateObj }
+        };
       }
       if (endDate) {
         console.log('Filtering up to endDate:', endDate);
-        const endDateObj = new Date(endDate);
+        const endDateObj = new Date(endDate).toUTCString();
         console.log('Converted endDate to Date object:', endDateObj);
         query = {
           ...query,
@@ -131,16 +131,16 @@ export class DataEntryService {
             ...query.createdAt,
             $lte: endDateObj
           }
-        }
+        };
       }
     }
 
-    console.log('Final filter query:', JSON.stringify(query));
+    console.log('Final filter query:', query);
 
     const dataEntries = await this.dataEntryModel
       .find(query)
       .populate('part')
-      .populate('rejection')
+      .populate('rejections.reason')
       .exec();
 
     console.log(`Found ${dataEntries.length} entries matching filter`);
@@ -157,6 +157,6 @@ export class DataEntryService {
   private async getPartIds(partNames: string[]): Promise<string[]> {
     const Part = this.dataEntryModel.db.model('Part');
     const parts = await Part.find({ name: { $in: partNames } }).exec();
-    return parts.map(part => part._id);
+    return parts.map(part => part._id.toString());
   }
 }
