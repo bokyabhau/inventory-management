@@ -100,6 +100,25 @@ export const useCreateDataEntry = () => {
   });
 };
 
+export const useUpdateDataEntry = () => {
+  return useMutation({
+    mutationFn: ({ id, dataEntry }: { id: string; dataEntry: Api.DataEntryDto }) =>
+      Api.updateDataEntryApi(id, dataEntry),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.DATA_ENTRIES });
+    },
+  });
+};
+
+export const useDeleteDataEntry = () => {
+  return useMutation({
+    mutationFn: Api.deleteDataEntryApi,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.DATA_ENTRIES });
+    },
+  });
+};
+
 export const useDataEntries = () => {
   return useQuery({
     queryKey: QUERY_KEYS.DATA_ENTRIES,
