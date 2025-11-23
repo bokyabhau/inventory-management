@@ -153,6 +153,33 @@ export const filterDataEntriesApi = async (params: FilterDataEntriesParams) => {
   return response.json();
 };
 
+export const updateDataEntryApi = async (id: string, dataEntry: DataEntryDto) => {
+  const response = await fetch(`/api/data-entries/${id}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(dataEntry),
+  });
+
+  if (!response.ok) {
+    const error: Error = await response.json();
+    throw new Error(error.message);
+  }
+  return response.json();
+};
+
+export const deleteDataEntryApi = async (id: string) => {
+  const response = await fetch(`/api/data-entries/${id}`, {
+    method: 'DELETE',
+  });
+
+  if (!response.ok) {
+    throw new Error('Network response was not ok');
+  }
+  return response.json();
+};
+
 // Preferences API
 export interface PreferenceDto {
   name: string;
