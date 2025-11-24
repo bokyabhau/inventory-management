@@ -18,6 +18,7 @@ import {
   TextField,
   Autocomplete,
 } from '@mui/material';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts';
 import { useDataEntries, usePreferences, useUpdateDataEntry, useDeleteDataEntry, useParts, useRejections } from '../../queryClient/hooks';
 import Dayjs from 'dayjs';
 import type { DataEntryDto } from '../../queryClient/endpoints';
@@ -101,19 +102,70 @@ const ExpandableRow: React.FC<{ row: DataEntry; warningThreshold: number; danger
             <Box sx={{ margin: 2 }}>
               <h4>Rejection Breakdown</h4>
               {row.rejections && row.rejections.length > 0 ? (
-                <Table size="small">
-                  <TableBody>
-                    {row.rejections.map((rejection) => (
-                      <TableRow key={rejection.id}>
-                        <TableCell>{rejection.reason?.name || 'N/A'}</TableCell>
-                        <TableCell align="right">{rejection.numberOfRejections}</TableCell>
-                        <TableCell align="right">
-                          {row.totalRejections > 0 ? `${((rejection.numberOfRejections / row.totalRejections) * 100).toFixed(2)}%` : '0%'}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                <Box>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart
+                      data={row.rejections.map((rejection) => ({
+                        name: rejection.reason?.name || 'N/A',
+                        percentage: row.numberOfParts > 0 ? (rejection.numberOfRejections / row.numberOfParts) * 100 : 0,
+                        count: rejection.numberOfRejections
+                      }))}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" />
+                      <YAxis label={{ value: 'Percentage (%)', angle: -90, position: 'insideLeft' }} />
+                      <Tooltip 
+                        formatter={(value: number) => {
+                          if (typeof value === 'number') {
+                            return value.toFixed(2) + '%';
+                          }
+                          return value;
+                        }}
+                        labelFormatter={(label) => `Rejection Type: ${label}`}
+                      />
+                      <Legend />
+                      <Bar dataKey="percentage" name="% of Rejections" radius={[8, 8, 0, 0]}>
+                        {row.rejections.map((_, index) => {
+                          const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E2'];
+                          return <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />;
+                        })}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                  <Box sx={{ marginTop: 3 }}>
+                    <h4>Rejection Distribution</h4>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <PieChart>
+                        <Pie
+                          data={row.rejections.map((rejection) => ({
+                            name: rejection.reason?.name || 'N/A',
+                            value: row.numberOfParts > 0 ? (rejection.numberOfRejections / row.numberOfParts) * 100 : 0
+                          }))}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          label={({ name, value }) => `${name}: ${value.toFixed(2)}%`}
+                          outerRadius={80}
+                          fill="#8884d8"
+                          dataKey="value"
+                        >
+                          {row.rejections.map((_, index) => {
+                            const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E2'];
+                            return <Cell key={`pie-cell-${index}`} fill={colors[index % colors.length]} />;
+                          })}
+                        </Pie>
+                        <Tooltip 
+                          formatter={(value: number) => {
+                            if (typeof value === 'number') {
+                              return value.toFixed(2) + '%';
+                            }
+                            return value;
+                          }}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </Box>
+                </Box>
               ) : (
                 <Alert severity="info">No rejections recorded</Alert>
               )}
