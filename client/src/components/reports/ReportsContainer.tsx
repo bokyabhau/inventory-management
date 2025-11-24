@@ -18,8 +18,9 @@ import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import Dayjs from 'dayjs';
 import { useParts } from '../../queryClient/hooks';
 import { useFilterDataEntries } from '../../queryClient/hooks';
+import { usePreferences } from '../../queryClient/hooks';
 import type { FilterDataEntriesParams } from '../../queryClient/endpoints';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 
 interface DataEntry {
   id: string;
@@ -57,6 +58,18 @@ const ReportsContainer: React.FC = () => {
 
   const { data: parts = [] } = useParts();
   const { data: filteredData = [] } = useFilterDataEntries(filters);
+  const { data: preferences = [] } = usePreferences();
+
+  // Extract warning and danger percentages from preferences
+  const warningPercentage = useMemo(() => {
+    const pref = (preferences as Array<{ name: string; value: string }>).find(p => p.name === 'warningPercentage');
+    return pref ? parseFloat(pref.value) : 5; // Default 5%
+  }, [preferences]);
+
+  const dangerPercentage = useMemo(() => {
+    const pref = (preferences as Array<{ name: string; value: string }>).find(p => p.name === 'dangerPercentage');
+    return pref ? parseFloat(pref.value) : 15; // Default 15%
+  }, [preferences]);
 
   const displayData = hasFiltered ? filteredData : [];
 
@@ -111,17 +124,17 @@ const ReportsContainer: React.FC = () => {
     if (selectedParts.length === 0) return;
 
     const newFilters: FilterDataEntriesParams = {};
-    
+
     if (selectedParts.length > 0) {
       newFilters.partName = selectedParts.join(',');
     }
-    
+
     const [startDateTime, endDateTime] = dateTimeRange;
-    
+
     if (startDateTime) {
       newFilters.startDate = startDateTime.toString();
     }
-    
+
     if (endDateTime) {
       const endDateTimeAdjusted = endDateTime.clone().second(59);
       newFilters.endDate = endDateTimeAdjusted.toString();
@@ -136,66 +149,137 @@ const ReportsContainer: React.FC = () => {
     setDateTimeRange([null, null]);
     setFilters({});
     setHasFiltered(false);
-  };  const exportToExcel = () => {
-    const reportData: any[] = [];
-    
+  };
+
+  const exportToExcel = async () => {
+    const workbook = new ExcelJS.Workbook();
+
+    // Color definitions based on preferences
+    const getColorForPercentage = (percentage: number) => {
+      if (percentage >= dangerPercentage) return 'FFFF0000'; // Red
+      if (percentage >= warningPercentage) return 'FFFFA500'; // Orange
+      return 'FF00B050'; // Green
+    };
+
+    // Group data by part
+    const dataByPart: { [key: string]: DataEntry[] } = {};
     (displayData as DataEntry[]).forEach((entry) => {
-      if (entry.rejections.length === 0) {
-        // If no rejections, create one row without rejection details
-        reportData.push({
-          Date: Dayjs(entry.date).format('DD/MM/YYYY HH:mm'),
-          Shift: entry.shift,
-          'Inspector Name': entry.inspectorName,
-          Part: entry.part?.name || 'N/A',
-          'Number of Parts': entry.numberOfParts,
-          Rejection: 'N/A',
-          'Number of Rejections': 0,
-          'Lot Number': entry.lotNumber,
-        });
-      } else {
-        // For each rejection, create a row
-        entry.rejections.forEach((rejection) => {
+      const partName = entry.part?.name || 'Unknown';
+      if (!dataByPart[partName]) {
+        dataByPart[partName] = [];
+      }
+      dataByPart[partName].push(entry);
+    });
+
+    // Create a sheet for each part
+    for (const [partName, entries] of Object.entries(dataByPart)) {
+      const worksheet = workbook.addWorksheet(
+        partName.replace(/[\[\]\\?*\/]/g, '_').substring(0, 31)
+      );
+
+      const reportData: any[] = [];
+
+      entries.forEach((entry) => {
+        if (entry.rejections.length === 0) {
           reportData.push({
             Date: Dayjs(entry.date).format('DD/MM/YYYY HH:mm'),
             Shift: entry.shift,
             'Inspector Name': entry.inspectorName,
-            Part: entry.part?.name || 'N/A',
+            'Load Number': entry.lotNumber,
+            'Part Name': entry.part?.name || 'N/A',
             'Number of Parts': entry.numberOfParts,
-            Rejection: rejection.reason?.name || 'N/A',
-            'Number of Rejections': rejection.numberOfRejections,
-            'Lot Number': entry.lotNumber,
+            'Type of Rejection': 'N/A',
+            'Number of Rejections': 0,
+            '% of Rejections': 0
           });
-        });
-      }
-    });
+        } else {
+          entry.rejections.forEach((rejection) => {
+            const percentage = (rejection.numberOfRejections / entry.numberOfParts) * 100;
+            reportData.push({
+              Date: Dayjs(entry.date).format('DD/MM/YYYY HH:mm'),
+              Shift: entry.shift,
+              'Load Number': entry.lotNumber,
+              'Inspector Name': entry.inspectorName,
+              'Part Name': entry.part?.name || 'N/A',
+              'Number of Parts': entry.numberOfParts,
+              'Type of Rejection': rejection.reason?.name || 'N/A',
+              'Number of Rejections': rejection.numberOfRejections,
+              '% of Rejections': percentage
+            });
+          });
+        }
+      });
 
-    const summaryData = [
-      { Metric: 'Total Parts', Value: statistics.totalParts },
-      { Metric: 'Total Rejections', Value: statistics.totalRejections },
-      {
-        Metric: 'Cumulative Rejection %',
-        Value: statistics.cumulativeRejectionPercentage.toFixed(2) + '%',
-      },
-      { Metric: '', Value: '' },
-      { 'Rejection Reason': 'Count', Percentage: 'Percentage' },
-      ...Object.entries(statistics.rejectionReasons).map(([reason, stats]) => ({
-        'Rejection Reason': reason,
-        Count: stats.count,
-        Percentage: stats.percentage.toFixed(2) + '%',
-      })),
-    ];
+      // Add headers
+      const headers = [
+        'Date',
+        'Shift',
+        'Inspector Name',
+        'Load Number',
+        'Part Name',
+        'Number of Parts',
+        'Type of Rejection',
+        'Number of Rejections',
+        '% of Rejections'
+      ];
+      worksheet.addRow(headers);
 
-    const workbook = XLSX.utils.book_new();
-    const dataSheet = XLSX.utils.json_to_sheet(reportData);
-    const summarySheet = XLSX.utils.json_to_sheet(summaryData);
+      // Style header row
+      const headerRow = worksheet.getRow(1);
+      headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4472C4' } };
+      headerRow.alignment = { horizontal: 'center', vertical: 'middle' };
 
-    XLSX.utils.book_append_sheet(workbook, dataSheet, 'Data Entries');
-    XLSX.utils.book_append_sheet(workbook, summarySheet, 'Summary');
+      // Add data rows with formatting
+      reportData.forEach((row) => {
+        const newRow = worksheet.addRow([
+          row.Date,
+          row.Shift,
+          row['Inspector Name'],
+          row['Load Number'],
+          row['Part Name'],
+          row['Number of Parts'],
+          row['Type of Rejection'],
+          row['Number of Rejections'],
+          row['% of Rejections']
+        ]);
 
-    XLSX.writeFile(
-      workbook,
-      `rejection_report_${Dayjs().format('YYYY-MM-DD_HH-mm-ss')}.xlsx`
-    );
+        // Color the % of Rejections column (column 9)
+        const percentageCell = newRow.getCell(9);
+        const color = getColorForPercentage(row['% of Rejections']);
+        percentageCell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: color }
+        };
+        percentageCell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+        percentageCell.numFmt = '0.00"%"';
+        percentageCell.alignment = { horizontal: 'center' };
+      });
+
+      // Set column widths
+      worksheet.columns = [
+        { width: 18 },
+        { width: 10 },
+        { width: 15 },
+        { width: 12 },
+        { width: 15 },
+        { width: 15 },
+        { width: 20 },
+        { width: 15 },
+        { width: 15 }
+      ];
+    }
+
+    // Save the workbook
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `rejection_report_${Dayjs().format('YYYY-MM-DD_HH-mm-ss')}.xlsx`;
+    a.click();
+    window.URL.revokeObjectURL(url);
   };
 
   return (
@@ -247,8 +331,8 @@ const ReportsContainer: React.FC = () => {
 
         {/* Buttons Row */}
         <Box sx={{ display: 'flex', gap: 2 }}>
-          <Button 
-            onClick={handleFilter} 
+          <Button
+            onClick={handleFilter}
             variant="contained"
             disabled={selectedParts.length === 0}
           >
@@ -258,7 +342,7 @@ const ReportsContainer: React.FC = () => {
             Reset
           </Button>
           {hasFiltered && displayData.length > 0 && (
-            <Button onClick={exportToExcel} variant="contained" color="success">
+            <Button onClick={() => exportToExcel()} variant="contained" color="success">
               Export to Excel
             </Button>
           )}
@@ -321,7 +405,7 @@ const ReportsContainer: React.FC = () => {
                       <TableCell><strong>Rejection</strong></TableCell>
                       <TableCell align="right"><strong>Number of Parts</strong></TableCell>
                       <TableCell align="right"><strong>Number of Rejections</strong></TableCell>
-                      <TableCell><strong>Lot Number</strong></TableCell>
+                      <TableCell><strong>Load Number</strong></TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -341,7 +425,7 @@ const ReportsContainer: React.FC = () => {
                           </TableRow>
                         );
                       }
-                      
+
                       // For each rejection, show a row
                       return entry.rejections.map((rejection, index) => (
                         <TableRow key={`${entry.id}-${index}`} hover>
