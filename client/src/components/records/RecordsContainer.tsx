@@ -18,10 +18,11 @@ import {
   TextField,
   Autocomplete,
 } from '@mui/material';
+import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts';
-import { useDataEntries, usePreferences, useUpdateDataEntry, useDeleteDataEntry, useParts, useRejections } from '../../queryClient/hooks';
+import { useDataEntries, usePreferences, useUpdateDataEntry, useDeleteDataEntry, useParts, useRejections, useFilterDataEntries } from '../../queryClient/hooks';
 import Dayjs from 'dayjs';
-import type { DataEntryDto } from '../../queryClient/endpoints';
+import type { DataEntryDto, FilterDataEntriesParams } from '../../queryClient/endpoints';
 
 interface RejectionDetail {
   id: string;
@@ -178,12 +179,24 @@ const ExpandableRow: React.FC<{ row: DataEntry; warningThreshold: number; danger
 };
 
 const RecordsContainer: React.FC = () => {
-  const { data: dataEntries = [], isLoading, isError, error } = useDataEntries();
+  const { data: allDataEntries = [], isLoading, isError, error } = useDataEntries();
   const { data: preferences = [] } = usePreferences();
   const { mutate: updateDataEntry } = useUpdateDataEntry();
   const { mutate: deleteDataEntry } = useDeleteDataEntry();
   const { data: parts = [] } = useParts();
   const { data: rejections = [] } = useRejections();
+
+  // Filter state
+  const [filters, setFilters] = useState<FilterDataEntriesParams>({});
+  const [hasFiltered, setHasFiltered] = useState(false);
+  const [dateRange, setDateRange] = useState<[Dayjs.Dayjs | null, Dayjs.Dayjs | null]>([null, null]);
+  const [loadNumberRange, setLoadNumberRange] = useState<[string, string]>(['', '']);
+  const [inspectorNameFilter, setInspectorNameFilter] = useState('');
+  const [rejectionPercentageRange, setRejectionPercentageRange] = useState<[string, string]>(['', '']);
+  const [selectedParts, setSelectedParts] = useState<string[]>([]);
+
+  const { data: filteredData = [] } = useFilterDataEntries(filters);
+  const displayData = hasFiltered ? filteredData : allDataEntries;
 
   const [editingEntry, setEditingEntry] = useState<DataEntry | null>(null);
   const [openEditDialog, setOpenEditDialog] = useState(false);
@@ -199,6 +212,53 @@ const RecordsContainer: React.FC = () => {
     const pref = (preferences as Array<{ name: string; value: string }>).find(p => p.name === 'dangerPercentage');
     return pref ? parseFloat(pref.value) : 20; // Default 20%
   }, [preferences]);
+
+  const handleApplyFilters = () => {
+    const newFilters: FilterDataEntriesParams = {};
+
+    if (selectedParts.length > 0) {
+      newFilters.partName = selectedParts.join(',');
+    }
+
+    const [startDate, endDate] = dateRange;
+    if (startDate) {
+      newFilters.startDate = startDate.toISOString();
+    }
+    if (endDate) {
+      newFilters.endDate = endDate.toISOString();
+    }
+
+    if (loadNumberRange[0]) {
+      newFilters.loadNumberStart = loadNumberRange[0];
+    }
+    if (loadNumberRange[1]) {
+      newFilters.loadNumberEnd = loadNumberRange[1];
+    }
+
+    if (inspectorNameFilter) {
+      newFilters.inspectorName = inspectorNameFilter;
+    }
+
+    if (rejectionPercentageRange[0]) {
+      newFilters.rejectionPercentageMin = rejectionPercentageRange[0];
+    }
+    if (rejectionPercentageRange[1]) {
+      newFilters.rejectionPercentageMax = rejectionPercentageRange[1];
+    }
+
+    setFilters(newFilters);
+    setHasFiltered(true);
+  };
+
+  const handleResetFilters = () => {
+    setSelectedParts([]);
+    setDateRange([null, null]);
+    setLoadNumberRange(['', '']);
+    setInspectorNameFilter('');
+    setRejectionPercentageRange(['', '']);
+    setFilters({});
+    setHasFiltered(false);
+  };
 
   const handleEditClick = (row: DataEntry) => {
     setEditingEntry(row);
@@ -271,7 +331,122 @@ const RecordsContainer: React.FC = () => {
   return (
     <div>
       <h2>Data Entry Records</h2>
-      {dataEntries.length === 0 ? (
+      
+      {/* Filter Panel */}
+      <Box sx={{ marginBottom: 3, padding: 2, border: '1px solid #ddd', borderRadius: 1 }}>
+        <h3>Filters</h3>
+        
+        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2, marginBottom: 2 }}>
+          {/* Part Selection */}
+          <Box>
+            <Autocomplete
+              multiple
+              options={parts.map((part) => part.name)}
+              value={selectedParts}
+              onChange={(_, newValue) => setSelectedParts(newValue)}
+              renderInput={(params) => (
+                <TextField {...params} label="Part Name" size="small" />
+              )}
+            />
+          </Box>
+
+          {/* Inspector Name */}
+          <Box>
+            <TextField
+              label="Inspector Name"
+              value={inspectorNameFilter}
+              onChange={(e) => setInspectorNameFilter(e.target.value)}
+              size="small"
+              fullWidth
+            />
+          </Box>
+
+          {/* Date Range */}
+          <Box>
+            <DateTimePicker
+              label="Start Date & Time"
+              value={dateRange[0]}
+              onChange={(newValue) => setDateRange([newValue, dateRange[1]])}
+              slotProps={{ textField: { size: 'small', fullWidth: true } }}
+              format="DD/MM/YYYY HH:mm"
+            />
+          </Box>
+
+          <Box>
+            <DateTimePicker
+              label="End Date & Time"
+              value={dateRange[1]}
+              onChange={(newValue) => setDateRange([dateRange[0], newValue])}
+              slotProps={{ textField: { size: 'small', fullWidth: true } }}
+              format="DD/MM/YYYY HH:mm"
+            />
+          </Box>
+
+          {/* Load Number Range */}
+          <Box>
+            <TextField
+              label="Load Number From"
+              value={loadNumberRange[0]}
+              onChange={(e) => setLoadNumberRange([e.target.value, loadNumberRange[1]])}
+              size="small"
+              fullWidth
+            />
+          </Box>
+
+          <Box>
+            <TextField
+              label="Load Number To"
+              value={loadNumberRange[1]}
+              onChange={(e) => setLoadNumberRange([loadNumberRange[0], e.target.value])}
+              size="small"
+              fullWidth
+            />
+          </Box>
+
+          {/* Rejection Percentage Range */}
+          <Box>
+            <TextField
+              label="Rejection % From"
+              type="number"
+              inputProps={{ step: '0.01', min: '0', max: '100' }}
+              value={rejectionPercentageRange[0]}
+              onChange={(e) => setRejectionPercentageRange([e.target.value, rejectionPercentageRange[1]])}
+              size="small"
+              fullWidth
+            />
+          </Box>
+
+          <Box>
+            <TextField
+              label="Rejection % To"
+              type="number"
+              inputProps={{ step: '0.01', min: '0', max: '100' }}
+              value={rejectionPercentageRange[1]}
+              onChange={(e) => setRejectionPercentageRange([rejectionPercentageRange[0], e.target.value])}
+              size="small"
+              fullWidth
+            />
+          </Box>
+        </Box>
+
+        {/* Filter Buttons */}
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Button onClick={handleApplyFilters} variant="contained" color="primary">
+            Apply Filters
+          </Button>
+          <Button onClick={handleResetFilters} variant="outlined">
+            Reset Filters
+          </Button>
+          {hasFiltered && (
+            <Alert severity="info" sx={{ flex: 1 }}>
+              Showing {displayData.length} of {allDataEntries.length} records
+            </Alert>
+          )}
+        </Box>
+      </Box>
+
+      {/* Data Table */}
+      {displayData.length === 0 ? (
         <Alert severity="info">No data entries found</Alert>
       ) : (
         <Paper>
@@ -289,7 +464,7 @@ const RecordsContainer: React.FC = () => {
                 <TableCell><strong>Lot Number</strong></TableCell>
                 <TableCell align="center"><strong>Actions</strong></TableCell>
               </TableRow>
-              {(dataEntries as DataEntry[]).map((entry) => (
+              {(displayData as DataEntry[]).map((entry) => (
                 <ExpandableRow key={entry.id} row={entry} warningThreshold={warningPercentage} dangerThreshold={dangerPercentage} onEdit={handleEditClick} onDelete={handleDeleteClick} />
               ))}
             </TableBody>

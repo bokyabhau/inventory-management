@@ -138,6 +138,12 @@ export interface FilterDataEntriesParams {
   partName?: string;
   startDate?: string;
   endDate?: string;
+  loadNumberStart?: string;
+  loadNumberEnd?: string;
+  inspectorName?: string;
+  rejectionPercentageMin?: string;
+  rejectionPercentageMax?: string;
+  allParts?: string;
 }
 
 export const filterDataEntriesApi = async (params: FilterDataEntriesParams) => {
@@ -145,6 +151,12 @@ export const filterDataEntriesApi = async (params: FilterDataEntriesParams) => {
   if (params.partName) queryParams.append('partName', params.partName);
   if (params.startDate) queryParams.append('startDate', params.startDate);
   if (params.endDate) queryParams.append('endDate', params.endDate);
+  if (params.loadNumberStart) queryParams.append('loadNumberStart', params.loadNumberStart);
+  if (params.loadNumberEnd) queryParams.append('loadNumberEnd', params.loadNumberEnd);
+  if (params.inspectorName) queryParams.append('inspectorName', params.inspectorName);
+  if (params.rejectionPercentageMin) queryParams.append('rejectionPercentageMin', params.rejectionPercentageMin);
+  if (params.rejectionPercentageMax) queryParams.append('rejectionPercentageMax', params.rejectionPercentageMax);
+  if (params.allParts) queryParams.append('allParts', params.allParts);
 
   const response = await fetch(`/api/data-entries/filter?${queryParams.toString()}`);
   if (!response.ok) {
