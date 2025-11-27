@@ -10,7 +10,7 @@ import { PartModule } from './parts/part.module';
 import { RejectionModule } from './rejections/rejection.module';
 import { DataEntryModule } from './dataEntry/data-entry.module';
 import { PreferenceModule } from './preferences/preference.module';
-console.log(__dirname)
+
 @Module({
   imports: [
     ConfigModule.forRoot(),

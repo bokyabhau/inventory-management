@@ -85,63 +85,100 @@ export class DataEntryService {
   async filter(
     partName?: string,
     startDate?: string,
-    endDate?: string
+    endDate?: string,
+    loadNumberStart?: string,
+    loadNumberEnd?: string,
+    inspectorName?: string,
+    rejectionPercentageMin?: string,
+    rejectionPercentageMax?: string,
+    allParts?: string
   ): Promise<DataEntry[]> {
-    let query;
+    let query: any = {};
 
-    console.log('Filter called with - partName:', partName, 'startDate:', startDate, 'endDate:', endDate);
+    console.log('Filter called with params:', {
+      partName,
+      startDate,
+      endDate,
+      loadNumberStart,
+      loadNumberEnd,
+      inspectorName,
+      rejectionPercentageMin,
+      rejectionPercentageMax,
+      allParts
+    });
 
-    if (partName) {
+    // Filter by part names (skip if allParts is true)
+    if (!allParts && partName) {
       const partNames = partName.split(',').map(p => p.trim());
       const partIds = await this.getPartIds(partNames);
 
       console.log('Filtering by part names:', partNames, 'resolved IDs:', partIds);
 
       if (partIds.length > 0) {
-        // query = {
-        //   ...query,
-        //   part: { $in: partIds }
-        // };
-        query = {
-          part: { $in: partIds }
-        };
+        query.part = { $in: partIds };
       } else {
         console.warn('No parts found for names:', partNames);
         return [];
       }
+    } else if (allParts === 'true') {
+      console.log('Selecting all parts');
+      // Don't filter by part - include all parts
     }
 
+    // Filter by date range
     if (startDate || endDate) {
+      query.date = {};
       if (startDate) {
         console.log('Filtering from startDate:', startDate);
-        const startDateObj = new Date(startDate).toUTCString();
-        console.log('Converted startDate to Date object:', startDateObj);
-        query = {
-          ...query,
-          createdAt: { $gte: startDateObj }
-        };
+        const startDateObj = new Date(startDate);
+        query.date.$gte = startDateObj;
       }
       if (endDate) {
         console.log('Filtering up to endDate:', endDate);
-        const endDateObj = new Date(endDate).toUTCString();
-        console.log('Converted endDate to Date object:', endDateObj);
-        query = {
-          ...query,
-          createdAt: {
-            ...query.createdAt,
-            $lte: endDateObj
-          }
-        };
+        const endDateObj = new Date(endDate);
+        query.date.$lte = endDateObj;
       }
+    }
+
+    // Filter by load number range
+    if (loadNumberStart || loadNumberEnd) {
+      query.lotNumber = {};
+      if (loadNumberStart) {
+        console.log('Filtering from loadNumberStart:', loadNumberStart);
+        query.lotNumber.$gte = loadNumberStart;
+      }
+      if (loadNumberEnd) {
+        console.log('Filtering up to loadNumberEnd:', loadNumberEnd);
+        query.lotNumber.$lte = loadNumberEnd;
+      }
+    }
+
+    // Filter by inspector name (case-insensitive)
+    if (inspectorName) {
+      console.log('Filtering by inspectorName:', inspectorName);
+      query.inspectorName = { $regex: inspectorName, $options: 'i' };
     }
 
     console.log('Final filter query:', query);
 
-    const dataEntries = await this.dataEntryModel
+    let dataEntries = await this.dataEntryModel
       .find(query)
       .populate('part')
       .populate('rejections.reason')
       .exec();
+
+    // Filter by rejection percentage range (client-side since it requires calculation)
+    if (rejectionPercentageMin || rejectionPercentageMax) {
+      const minPercentage = rejectionPercentageMin ? parseFloat(rejectionPercentageMin) : 0;
+      const maxPercentage = rejectionPercentageMax ? parseFloat(rejectionPercentageMax) : 100;
+
+      dataEntries = dataEntries.filter(entry => {
+        const rejectionPercentage = entry.numberOfParts > 0
+          ? (entry.totalRejections / entry.numberOfParts) * 100
+          : 0;
+        return rejectionPercentage >= minPercentage && rejectionPercentage <= maxPercentage;
+      });
+    }
 
     console.log(`Found ${dataEntries.length} entries matching filter`);
 

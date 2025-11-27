@@ -21,9 +21,25 @@ export class DataEntryController {
   async filter(
     @Query('partName') partName?: string,
     @Query('startDate') startDate?: string,
-    @Query('endDate') endDate?: string
+    @Query('endDate') endDate?: string,
+    @Query('loadNumberStart') loadNumberStart?: string,
+    @Query('loadNumberEnd') loadNumberEnd?: string,
+    @Query('inspectorName') inspectorName?: string,
+    @Query('rejectionPercentageMin') rejectionPercentageMin?: string,
+    @Query('rejectionPercentageMax') rejectionPercentageMax?: string,
+    @Query('allParts') allParts?: string
   ) {
-    return this.dataEntryService.filter(partName, startDate, endDate);
+    return this.dataEntryService.filter(
+      partName,
+      startDate,
+      endDate,
+      loadNumberStart,
+      loadNumberEnd,
+      inspectorName,
+      rejectionPercentageMin,
+      rejectionPercentageMax,
+      allParts
+    );
   }
 
   @Get(':id')

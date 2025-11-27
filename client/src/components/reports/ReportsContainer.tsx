@@ -125,7 +125,10 @@ const ReportsContainer: React.FC = () => {
 
     const newFilters: FilterDataEntriesParams = {};
 
-    if (selectedParts.length > 0) {
+    // If "All" is selected, set a flag instead of sending part names
+    if (selectedParts.includes('All')) {
+      newFilters.allParts = 'true';
+    } else {
       newFilters.partName = selectedParts.join(',');
     }
 
@@ -257,6 +260,47 @@ const ReportsContainer: React.FC = () => {
         percentageCell.alignment = { horizontal: 'center' };
       });
 
+      // Add totals row
+      const totalParts = entries.reduce((sum, entry) => sum + entry.numberOfParts, 0);
+      const totalRejections = entries.reduce((sum, entry) => sum + entry.totalRejections, 0);
+      const cumulativeRejectionPercentage = totalParts > 0 ? (totalRejections / totalParts) * 100 : 0;
+
+      const totalsRow = worksheet.addRow([
+        'TOTAL',
+        '',
+        '',
+        '',
+        '',
+        totalParts,
+        '',
+        totalRejections,
+        cumulativeRejectionPercentage
+      ]);
+
+      // Style totals row
+      totalsRow.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 12 };
+      totalsRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF203864' } };
+      totalsRow.alignment = { horizontal: 'center', vertical: 'middle' };
+
+      // Format totals cells
+      const totalPartsCell = totalsRow.getCell(6);
+      totalPartsCell.numFmt = '0';
+      totalPartsCell.alignment = { horizontal: 'center' };
+
+      const totalRejectionsCell = totalsRow.getCell(8);
+      totalRejectionsCell.numFmt = '0';
+      totalRejectionsCell.alignment = { horizontal: 'center' };
+
+      const cumulativePercentageCell = totalsRow.getCell(9);
+      const totalColor = getColorForPercentage(cumulativeRejectionPercentage);
+      cumulativePercentageCell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: totalColor }
+      };
+      cumulativePercentageCell.numFmt = '0.00"%"';
+      cumulativePercentageCell.alignment = { horizontal: 'center' };
+
       // Set column widths
       worksheet.columns = [
         { width: 18 },
@@ -292,9 +336,20 @@ const ReportsContainer: React.FC = () => {
           <FormControl sx={{ minWidth: 300 }}>
             <Autocomplete
               multiple
-              options={parts.map((part) => part.name)}
-              value={selectedParts}
-              onChange={(_, newValue) => setSelectedParts(newValue)}
+              options={['All', ...parts.map((part) => part.name)]}
+              value={selectedParts.includes('All') ? ['All'] : selectedParts}
+              onChange={(_, newValue) => {
+                // If "All" is selected, select all parts internally but only show "All"
+                if (newValue.includes('All')) {
+                  setSelectedParts(['All', ...parts.map((part) => part.name)]);
+                }
+                // If "All" is deselected when it was the only thing selected, clear all
+                else if (selectedParts.includes('All') && !newValue.includes('All')) {
+                  setSelectedParts(newValue.filter(v => v !== 'All'));
+                } else {
+                  setSelectedParts(newValue);
+                }
+              }}
               renderInput={(params) => (
                 <TextField {...params} label="Select Parts" size="small" />
               )}
